@@ -219,7 +219,8 @@ module.exports = {
        memoryOnly: { module: 'memory' },
        file: { module: 'localfilesystem',
                config: {
-                    cache: false
+                    cache: true,
+                    flushInterval: 0
                }
              }
     },
