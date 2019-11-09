@@ -208,7 +208,9 @@ module.exports = {
     //    context.global.os
 
     functionGlobalContext: {
-        mongodb:require('mongodb')
+        mongodb:require('mongodb'),
+        child_process:require('child_process'),
+        path:require('path')
         // os:require('os'),
         // octalbonescript:require('octalbonescript'),
         // jfive:require("johnny-five"),
