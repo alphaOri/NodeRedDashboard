@@ -8,21 +8,21 @@ const lastSeenDate = process.argv[4] ? process.argv[4] : new Date() //default to
 //database vars
 const mongoDbName = "water"
 const mongoDailyCollection = "daily"
-const mongoWeeklyCollection = "weekly"
+const mongoMonthlyCollection = "monthly"
 
-console.log("Updating weekly info...")
+console.log("Updating monthly info...")
 var doneUpdating = {period: false, averages: false}
 
 //connect to database
 var collectionHandleDaily
-var collectionHandleWeekly
+var collectionHandleMonthly
 
 //get start and end of period
 var start = new Date(lastSeenDate)
-start.setDate(start.getDate() - (start.getDay()!==0 ? (start.getDay()-1) : 6)) //get previous Monday from date, getDay returns 0(sun)-6(sat)
+start.setDate(1) //first of this month
 start.setHours(0,0,0,0)
-var end = new Date(start.getTime())
-end.setDate(end.getDate()+6) //get last day of week
+var lastDayOfMonth = new Date(start.getFullYear(), start.getMonth()+1, 0) //get last day of this month
+var end = new Date(lastDayOfMonth)
 end.setHours(24,0,0,0)
 
 mongodb.MongoClient.connect(mongodbUrl, {useNewUrlParser:true, useUnifiedTopology: true }, function(err, client) {
@@ -32,13 +32,13 @@ mongodb.MongoClient.connect(mongodbUrl, {useNewUrlParser:true, useUnifiedTopolog
         //console.log("Connected to database.")
         var dbHandle = client.db(mongoDbName)
         collectionHandleDaily = dbHandle.collection(mongoDailyCollection)
-        collectionHandleWeekly = dbHandle.collection(mongoWeeklyCollection)
+        collectionHandleMonthly = dbHandle.collection(mongoMonthlyCollection)
         doUpdate()
     }
 })
 
 function doUpdate(){
-    //console.log("Fetching week data...")
+    //console.log("Fetching month data...")
 
     //get first doc prior to today
     collectionHandleDaily.find({created: { $gt:start, $lt:end }}).project({created: 1, allTotal: 1, sourceTotals: 1, incomplete: 1}).toArray(
@@ -48,7 +48,7 @@ function doUpdate(){
         else {
             //console.log(periodDocArray)
             if(periodDocArray.length>0){ //monitoring system was off during this period
-                if(periodDocArray.length === 7) { //otherwise an incomplete week
+                if(periodDocArray.length === lastDayOfMonth.getDate()) { //otherwise an incomplete month
                     updateAverages(periodDocArray)
                 } else {
                     //console.log("day was incomplete. skipped updating averages")
@@ -65,7 +65,7 @@ function doUpdate(){
 
 function updateAverages(periodDocArray){
     //console.log("period was complete. getting averages.")
-    collectionHandleWeekly.findOne({docName: "averages"}, function(err, averagesDoc) {
+    collectionHandleMonthly.findOne({docName: "averages"}, function(err, averagesDoc) {
         //console.log("returned from periodDocArray")
         if(err){ console.error(err) } 
         else {
@@ -74,46 +74,22 @@ function updateAverages(periodDocArray){
                 averagesDoc = {
                     allAverage: 0,
                     sourceAverages: new Object(), //contains object "name"->{average: , numOfSamples: }
-                    dowAverages: Array.from({length:7}, u => ({allAverage: 0, sourceAverages: {}, numberOfSamples: 0})),
                     numberOfSamples: 0
                 }
             }
 
             var allSoFar = 0
             var sourcesSoFar = new Map() //contains object "name"->total
-            for(let index=0; index<averagesDoc.dowAverages.length; index++){
-                var checkDowDate = new Date(periodDocArray[index].created)
-                if((checkDowDate.getDay()!==0 ? (checkDowDate.getDay()-1) : 6) === index) {
-                    Object.entries(periodDocArray[index].sourceTotals).forEach(([sourceName,sourceTotal])=>{
-                        sourcesSoFar.set(sourceName, (sourcesSoFar.has(sourceName) ? sourcesSoFar.get(sourceName) : 0)+sourceTotal)
-                    })
-                    allSoFar += periodDocArray[index].allTotal
-                    //now update dowAverages
-                    averagesDoc.dowAverages[index].allAverage = (averagesDoc.dowAverages[index].allAverage*averagesDoc.dowAverages[index].numberOfSamples+periodDocArray[index].allTotal)/(averagesDoc.dowAverages[index].numberOfSamples+1)
-                    averagesDoc.dowAverages[index].numberOfSamples++
-                    Object.entries(averagesDoc.dowAverages[index].sourceAverages).forEach(([sourceName,sourceData])=>{
-                        averagesDoc.dowAverages[index].sourceAverages[sourceName] = {
-                            average: ((sourceData.average*sourceData.numberOfSamples+(periodDocArray[index].sourceTotals.hasOwnProperty(sourceName) ? periodDocArray[index].sourceTotals[sourceName] : 0))/(sourceData.numberOfSamples+1)),
-                            numberOfSamples: sourceData.numberOfSamples+1
-                        }
-                    })
-                    //in case we have a new source not in averages, add it
-                    Object.entries(periodDocArray[index].sourceTotals).forEach(([sourceName, sourceTotal])=>{
-                        if(!averagesDoc.dowAverages[index].sourceAverages.hasOwnProperty(sourceName)){
-                            averagesDoc.dowAverages[index].sourceAverages[sourceName] = {
-                                average: sourceTotal,
-                                numberOfSamples: 1
-                            }
-                        }
-                    })
-                } else {
-                    console.error("day of week mismatch!")
-                }
+            for(let index=0; index<periodDocArray.length; index++){
+                Object.entries(periodDocArray[index].sourceTotals).forEach(([sourceName,sourceTotal])=>{
+                    sourcesSoFar.set(sourceName, (sourcesSoFar.has(sourceName) ? sourcesSoFar.get(sourceName) : 0)+sourceTotal)
+                })
+                allSoFar += periodDocArray[index].allTotal
             }
 
             averagesDoc.allAverage = (averagesDoc.allAverage*averagesDoc.numberOfSamples+allSoFar)/(averagesDoc.numberOfSamples+1)
             averagesDoc.numberOfSamples++
-            //console.log(averagesDoc)
+            
             //go through every source in averages and update
             Object.entries(averagesDoc.sourceAverages).forEach(([sourceName,sourceData])=>{
                 averagesDoc.sourceAverages[sourceName] = {
@@ -139,12 +115,11 @@ function updateAverages(periodDocArray){
                 $set: {
                     allAverage: averagesDoc.allAverage,
                     sourceAverages: averagesDoc.sourceAverages,
-                    dowAverages: averagesDoc.dowAverages,
                     numberOfSamples: averagesDoc.numberOfSamples
                 }
             }
             //console.log("update averages completed")
-            collectionHandleWeekly.updateOne({docName: "averages"}, updateAveragesDoc, {upsert:true, w: 1}, function(err, result) {
+            collectionHandleMonthly.updateOne({docName: "averages"}, updateAveragesDoc, {upsert:true, w: 1}, function(err, result) {
                 if(err){ console.error(err) } 
                 else {
                     //console.log("database update averages completed")
@@ -161,13 +136,10 @@ function updatePeriod(periodDocArray){
     var allSoFar = 0
     var sourcesSoFar = new Map() //contains object "name"->total
     for(let index=0; index<periodDocArray.length; index++){
-        var checkDowDate = new Date(periodDocArray[index].created)
-        if((checkDowDate.getDay()!==0 ? (checkDowDate.getDay()-1) : 6) === index) {
-            Object.entries(periodDocArray[index].sourceTotals).forEach(([sourceName,sourceTotal])=>{
-                sourcesSoFar.set(sourceName, (sourcesSoFar.has(sourceName) ? sourcesSoFar.get(sourceName) : 0)+sourceTotal)
-            })
-            allSoFar += periodDocArray[index].allTotal
-        }
+        Object.entries(periodDocArray[index].sourceTotals).forEach(([sourceName,sourceTotal])=>{
+            sourcesSoFar.set(sourceName, (sourcesSoFar.has(sourceName) ? sourcesSoFar.get(sourceName) : 0)+sourceTotal)
+        })
+        allSoFar += periodDocArray[index].allTotal
     }
 
     var updateDoc = {  
@@ -178,7 +150,7 @@ function updatePeriod(periodDocArray){
         }
     }
     //console.log("update day complete")
-    collectionHandleWeekly.updateOne({created: { $gt:start, $lt:end }}, updateDoc, {upsert:true, w: 1}, function(err, result) {
+    collectionHandleMonthly.updateOne({created: { $gt:start, $lt:end }}, updateDoc, {upsert:true, w: 1}, function(err, result) {
         if(err){ console.error(err) } 
         else {
             //console.log("database update day completed")
