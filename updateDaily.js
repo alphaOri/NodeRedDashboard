@@ -47,6 +47,7 @@ function doUpdate(){
             } else { //else to "if(periodDoc)"
                 //console.log("no period doc, so no updating anything")
                 process.send({ success: true })
+                process.exit()
             }
         }
     })
@@ -138,7 +139,10 @@ function updateAverages(periodDoc){
                 else {
                     //console.log("database update averages completed")
                     doneUpdating.averages=true
-                    if(doneUpdating.period) { process.send({ success: true }) }
+                    if(doneUpdating.period) { 
+                        process.send({ success: true }) 
+                        process.exit()
+                    }
                 }
             })
         }
@@ -200,7 +204,10 @@ function updatePeriod(periodDoc){
         else {
             //console.log("database update day completed")
             doneUpdating.period=true
-            if(doneUpdating.averages) { process.send({ success: true }) }
+            if(doneUpdating.averages) { 
+                process.send({ success: true }) 
+                process.exit()
+            }
         }
     })
 }

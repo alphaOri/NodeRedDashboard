@@ -58,6 +58,7 @@ function doUpdate(){
             } else { //else to "if(periodDoc)"
                 //console.log("no period doc, so no updating anything")
                 process.send({ success: true })
+                process.exit()
             }
         }
     })
@@ -81,9 +82,9 @@ function updateAverages(periodDocArray){
 
             var allSoFar = 0
             var sourcesSoFar = new Map() //contains object "name"->total
-            for(let index=0; index<averagesDoc.dowAverages.length; index++){
-                var checkDowDate = new Date(periodDocArray[index].created)
-                if((checkDowDate.getDay()!==0 ? (checkDowDate.getDay()-1) : 6) === index) {
+            for(let index=0; index<7; index++){
+                var checkSamePeriod = new Date(periodDocArray[index].created)
+                if((checkSamePeriod.getDay()!==0 ? (checkSamePeriod.getDay()-1) : 6) === index) {
                     Object.entries(periodDocArray[index].sourceTotals).forEach(([sourceName,sourceTotal])=>{
                         sourcesSoFar.set(sourceName, (sourcesSoFar.has(sourceName) ? sourcesSoFar.get(sourceName) : 0)+sourceTotal)
                     })
@@ -149,7 +150,10 @@ function updateAverages(periodDocArray){
                 else {
                     //console.log("database update averages completed")
                     doneUpdating.averages=true
-                    if(doneUpdating.period) { process.send({ success: true }) }
+                    if(doneUpdating.period) { 
+                        process.send({ success: true }) 
+                        process.exit()
+                    }
                 }
             })
         }
@@ -161,13 +165,10 @@ function updatePeriod(periodDocArray){
     var allSoFar = 0
     var sourcesSoFar = new Map() //contains object "name"->total
     for(let index=0; index<periodDocArray.length; index++){
-        var checkDowDate = new Date(periodDocArray[index].created)
-        if((checkDowDate.getDay()!==0 ? (checkDowDate.getDay()-1) : 6) === index) {
-            Object.entries(periodDocArray[index].sourceTotals).forEach(([sourceName,sourceTotal])=>{
-                sourcesSoFar.set(sourceName, (sourcesSoFar.has(sourceName) ? sourcesSoFar.get(sourceName) : 0)+sourceTotal)
-            })
-            allSoFar += periodDocArray[index].allTotal
-        }
+        Object.entries(periodDocArray[index].sourceTotals).forEach(([sourceName,sourceTotal])=>{
+            sourcesSoFar.set(sourceName, (sourcesSoFar.has(sourceName) ? sourcesSoFar.get(sourceName) : 0)+sourceTotal)
+        })
+        allSoFar += periodDocArray[index].allTotal
     }
 
     var updateDoc = {  
@@ -183,7 +184,10 @@ function updatePeriod(periodDocArray){
         else {
             //console.log("database update day completed")
             doneUpdating.period=true
-            if(doneUpdating.averages) { process.send({ success: true }) }
+            if(doneUpdating.averages) { 
+                process.send({ success: true }) 
+                process.exit()
+            }
         }
     })
 }
