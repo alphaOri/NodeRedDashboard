@@ -14,10 +14,13 @@ const dateInfo = process.argv[3] ? JSON.parse(process.argv[3]) : {
 //globals
 const mongoDbName = "water"
 
-main()
+//main()
+process.send({ success: true }) 
+process.exit()
 
 async function main(){
-    const dbHandle = await connectToDatabase()
+    const mongoClient = await connectToDatabase()
+    const dbHandle = mongoClient.db(mongoDbName)
     var promises = []
 
     if(dateInfo.newDay){
@@ -65,7 +68,9 @@ async function main(){
         }
     }
 
+    console.log(promises)
     await Promise.all(promises)
+    mongoClient.close() //don't wait, can hang if nothing to close... not sure why
     console.log("process exit")
     process.send({ success: true }) 
     process.exit()
@@ -74,7 +79,7 @@ async function main(){
 async function connectToDatabase(){
     var client = await mongodb.MongoClient.connect(mongodbUrl, {useNewUrlParser:true, useUnifiedTopology:true })
     console.log("Connected to database.")
-    return client.db(mongoDbName)
+    return client
 }
 
 async function getDocumentsFromDatabase(collectionHandle, dateRange){
@@ -89,6 +94,7 @@ async function getDocumentsFromDatabase(collectionHandle, dateRange){
 async function prepAndWriteAveragesToDatabase(periodDocArray, collectionHandle, rangeType){
     console.log("prepAndWriteAveragesToDatabase")
     await updateAveragesDocInDatabase(await prepareAveragesDoc(periodDocArray, collectionHandle, rangeType), collectionHandle, rangeType)
+    console.log("done prepAndWriteAveragesToDatabase")
 }
 
 async function prepareAveragesDoc(periodDocArray, collectionHandle, rangeType){
