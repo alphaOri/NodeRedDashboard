@@ -14,9 +14,9 @@ const dateInfo = process.argv[3] ? JSON.parse(process.argv[3]) : {
 //globals
 const mongoDbName = "water"
 
-//main()
-process.send({ success: true }) 
-process.exit()
+main()
+//process.send({ success: true }) 
+//process.exit()
 
 async function main(){
     const mongoClient = await connectToDatabase()
