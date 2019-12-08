@@ -14,7 +14,7 @@ const dateInfo = process.argv[3] ? JSON.parse(process.argv[3]) : {
 //globals
 const mongoDbName = "water"
 
-main()
+main().catch((err) => { console.error(err) })
 //process.send({ success: true }) 
 //process.exit()
 
@@ -124,13 +124,15 @@ async function prepareAveragesDoc(periodDocArray, collectionHandle, rangeType){
     } else {
         var periodTotals = {allTotal: 0, sourceTotals: new Object()} //sourceTotals contains object {name: total}
         for(let index=0; index<periodDocArray.length; index++){
-            if(getNumberOfSubPeriods(new Date(periodDocArray[index].created), rangeType) === index) {
+            if(rangeType === "month") { //month has no subperiods
                 addToPeriod(periodTotals, periodDocArray[index])
-                if(rangeType !== "month"){
+            } else { //only week and year have subperiods
+                if(getNumberOfSubPeriods(new Date(periodDocArray[index].created), rangeType) === index) {
+                    addToPeriod(periodTotals, periodDocArray[index])
                     averagePeriod(averagesDoc.subPeriodAverages[index], periodDocArray[index])
+                } else {
+                    console.error("sub-period mismatch!")
                 }
-            } else {
-                console.error("sub-period mismatch!")
             }
         }
         averagePeriod(averagesDoc, periodTotals)

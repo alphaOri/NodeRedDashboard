@@ -210,8 +210,8 @@ module.exports = {
     functionGlobalContext: {
         mongodb:require('mongodb'),
         child_process:require('child_process'),
-        path:require('path')
-        // os:require('os'),
+        path:require('path'),
+        os:require('os'),
         // octalbonescript:require('octalbonescript'),
         // jfive:require("johnny-five"),
         // j5board:require("johnny-five").Board({repl:false})
