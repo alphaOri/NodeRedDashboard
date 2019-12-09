@@ -260,7 +260,6 @@ async function writePeriodDocToDatabase(theDoc, collectionHandle, aDateInPeriod,
     }
     if(rangeType==="day"){
         updateDoc.$set.subPeriodTotals = theDoc.subPeriodTotals
-        updateDoc.$set.allTotalComp = theDoc.allTotal //todo: remove this line after checking
     } else {
         updateDoc.$set.allTotal = theDoc.allTotal
     }

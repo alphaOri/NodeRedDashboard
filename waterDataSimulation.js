@@ -4,7 +4,7 @@ var client = null
 //Date vars
 //var d = new Date(year, month, day, hours, minutes, seconds, milliseconds);
 var currentDate =  new Date(2016, 0, 1, 0, 0, 0)
-var endDate =      new Date(2017, 0, 1, 0, 0, 0)
+var endDate =      new Date(2019, 0, 1, 0, 0, 0)
 
 Date = class extends Date {
   constructor(...options) {
