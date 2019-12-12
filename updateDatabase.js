@@ -19,6 +19,7 @@ main().catch((err) => { console.error(err) })
 //process.exit()
 
 async function main(){
+    console.log("-------------- NEW UDPATE --------------")
     const mongoClient = await connectToDatabase()
     const dbHandle = mongoClient.db(mongoDbName)
     var promises = []
@@ -26,8 +27,8 @@ async function main(){
     if(dateInfo.newDay){
         var collectionHandleDaily = dbHandle.collection("daily")
         const dateRangeDay = getDateRange(dateInfo.lastSeenDate, "day")
-        const periodDocArrayDay = await getDocumentsFromDatabase(collectionHandleDaily, dateRangeDay)
-        const isCompleteDay = periodIsComplete(periodDocArrayDay, 1) && !periodDocArrayDay[0].incomplete //should just have 1 day, also check that it's complete
+        const periodDocArrayDay = await getDocumentsFromDatabase(collectionHandleDaily, dateRangeDay, "day")
+        const isCompleteDay = isPeriodComplete(periodDocArrayDay, 1) && !periodDocArrayDay[0].incomplete //should just have 1 day, also check that it's complete
         const periodPromiseDay = writePeriodDocToDatabase(preparePeriodDoc(periodDocArrayDay, "day"), collectionHandleDaily, dateInfo.lastSeenDate, dateRangeDay, isCompleteDay, "day")
         if(isCompleteDay) {
             promises.push(prepAndWriteAveragesToDatabase(periodDocArrayDay, collectionHandleDaily, "day"))
@@ -36,8 +37,8 @@ async function main(){
         if(dateInfo.newWeek){
             var collectionHandleWeekly = dbHandle.collection("weekly")
             const dateRangeWeek = getDateRange(dateInfo.lastSeenDate, "week")
-            const periodDocArrayWeek = await getDocumentsFromDatabase(collectionHandleDaily, dateRangeWeek)
-            const isCompleteWeek = periodIsComplete(periodDocArrayWeek, 7) //should have 7 days in the week
+            const periodDocArrayWeek = await getDocumentsFromDatabase(collectionHandleDaily, dateRangeWeek, "week")
+            const isCompleteWeek = isPeriodComplete(periodDocArrayWeek, 7) //should have 7 days in the week
             const periodPromiseWeek = writePeriodDocToDatabase(preparePeriodDoc(periodDocArrayWeek, "week"), collectionHandleWeekly, dateInfo.lastSeenDate, dateRangeWeek, isCompleteWeek, "week")
             if(isCompleteWeek) {
                 promises.push(prepAndWriteAveragesToDatabase(periodDocArrayWeek, collectionHandleWeekly, "week"))
@@ -47,8 +48,8 @@ async function main(){
         if(dateInfo.newMonth){
             var collectionHandleMonthly = dbHandle.collection("monthly")
             const dateRangeMonth = getDateRange(dateInfo.lastSeenDate, "month")
-            const periodDocArrayMonth = await getDocumentsFromDatabase(collectionHandleDaily, dateRangeMonth)
-            const isCompleteMonth = periodIsComplete(periodDocArrayMonth, (new Date(dateRangeMonth.start.getFullYear(), dateRangeMonth.start.getMonth()+1, 0)).getDate()) //using last date of month
+            const periodDocArrayMonth = await getDocumentsFromDatabase(collectionHandleDaily, dateRangeMonth, "month")
+            const isCompleteMonth = isPeriodComplete(periodDocArrayMonth, (new Date(dateRangeMonth.start.getFullYear(), dateRangeMonth.start.getMonth()+1, 0)).getDate()) //using last date of month
             const periodPromiseMonth = writePeriodDocToDatabase(preparePeriodDoc(periodDocArrayMonth, "month"), collectionHandleMonthly, dateInfo.lastSeenDate, dateRangeMonth, isCompleteMonth, "month")
             if(isCompleteMonth) {
                 promises.push(prepAndWriteAveragesToDatabase(periodDocArrayMonth, collectionHandleMonthly, "month"))
@@ -57,8 +58,8 @@ async function main(){
             if(dateInfo.newYear){
                 var collectionHandleYearly = dbHandle.collection("yearly")
                 const dateRangeYear = getDateRange(dateInfo.lastSeenDate, "year")
-                const periodDocArrayYear = await getDocumentsFromDatabase(collectionHandleMonthly, dateRangeYear)
-                const isCompleteYear = periodIsComplete(periodDocArrayYear, 12) //12 months in a year
+                const periodDocArrayYear = await getDocumentsFromDatabase(collectionHandleMonthly, dateRangeYear, "year")
+                const isCompleteYear = isPeriodComplete(periodDocArrayYear, 12) //12 months in a year
                 const periodPromiseYear = writePeriodDocToDatabase(preparePeriodDoc(periodDocArrayYear, "year"), collectionHandleYearly, dateInfo.lastSeenDate, dateRangeYear, isCompleteYear, "year")
                 if(isCompleteYear){
                     promises.push(prepAndWriteAveragesToDatabase(periodDocArrayYear, collectionHandleYearly, "year"))
@@ -82,10 +83,14 @@ async function connectToDatabase(){
     return client
 }
 
-async function getDocumentsFromDatabase(collectionHandle, dateRange){
+async function getDocumentsFromDatabase(collectionHandle, dateRange, rangeType){
     console.log("getDocumentsFromDatabase")
     try {
-        return periodDocArray = await collectionHandle.find({created: { $gt:dateRange.start, $lt:dateRange.end }})/*.project({created: 1, allTotal: 1, sourceTotals: 1, incomplete: 1})*/.toArray()
+        if(rangeType==="day"){
+            return periodDocArray = await collectionHandle.find({created: { $gte:dateRange.start, $lt:dateRange.end }}).toArray()
+        } else {
+            return periodDocArray = await collectionHandle.find({created: { $gte:dateRange.start, $lt:dateRange.end }}).project({created: 1, allTotal: 1, sourceTotals: 1, incomplete: 1}).toArray()
+        }
     } catch (error) {
         console.error(error);
     }
@@ -212,7 +217,7 @@ function preparePeriodDoc(periodDocArray, rangeType){
         var periodTotals = {allTotal: 0, sourceTotals: new Object(), subPeriodTotals : Array.from({length:24}, u => ({allTotal: 0, sourceTotals: new Object()}))} //sourceTotals contains object {name: total} 
         periodDocArray[0]===undefined ? null : prepareDayPeriodDoc(periodDocArray[0], periodTotals)
     } else {
-        var periodTotals = {allTotal: 0, sourceTotals: new Object()} //sourceTotals contains object {name: total}
+        var periodTotals = {allTotal: 0, sourceTotals: new Object()} //don't need subPeriodTotals since week, month, year period entries don't include them
         for(let index=0; index<periodDocArray.length; index++){
             addToPeriod(periodTotals, periodDocArray[index])
         }
@@ -251,7 +256,8 @@ async function writePeriodDocToDatabase(theDoc, collectionHandle, aDateInPeriod,
     var updateDoc = {
         $setOnInsert: { //daily already has these entries
             created: new Date(aDateInPeriod),
-            incomplete: !isComplete
+            incomplete: !isComplete,
+            allTotal: theDoc.allTotal
         },
         $currentDate: {modified: true},
         $set: {
@@ -260,16 +266,14 @@ async function writePeriodDocToDatabase(theDoc, collectionHandle, aDateInPeriod,
     }
     if(rangeType==="day"){
         updateDoc.$set.subPeriodTotals = theDoc.subPeriodTotals
-    } else {
-        updateDoc.$set.allTotal = theDoc.allTotal
     }
  
     try{
-        await collectionHandle.updateOne({created: { $gt:dateRange.start, $lt:dateRange.end }}, updateDoc, {upsert:true, w: 1})
+        await collectionHandle.updateOne({created: { $gte:dateRange.start, $lt:dateRange.end }}, updateDoc, {upsert:true, w: 1})
     } catch(error) {
         console.error(error)
     }
-    //console.log("database update day completed")
+    console.log("database update day completed")
 }
 
 /*  
@@ -321,7 +325,7 @@ function averagePeriod(periodAverages, periodTotals){
 }
 
 function getDateRange(theDate, rangeType) {
-    console.log("getDateRange")
+    //console.log("getDateRange")
     switch(rangeType) {
       case "day":
         var start = new Date(theDate)
@@ -358,11 +362,13 @@ function getDateRange(theDate, rangeType) {
     return {start: start, end: end}
 }
 
-function periodIsComplete(array, requiredLength){
-    console.log("periodIsComplete")
+function isPeriodComplete(array, requiredLength){
+    //console.log("isPeriodComplete")
     if(array.length===requiredLength){
+        console.log("period is complete")
         return true
     }
+    console.log("period is NOT complete")
     return false
 }
 
