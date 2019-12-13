@@ -1,4 +1,7 @@
 const MQTT = require("async-mqtt");
+const path = require('path')
+const fs = require('fs')
+const os = require('os')
 var client = null
 
 //Date vars
@@ -17,27 +20,19 @@ Date = class extends Date {
 }
 
 //testing loop vars
-sourceList = [
-        { name: "ktchn sink", clicks: 13, quantity: 1 },
-        { name: "bath sink",  clicks: 17, quantity: 2 },
-        { name: "dishwasher", clicks: 10, quantity: 1 },
-        { name: "toilet",     clicks: 41, quantity: 2 },
-        { name: "tub",        clicks: 61, quantity: 1 },
-        { name: "shower",     clicks: 28, quantity: 1 },
-        { name: "laundry",    clicks: 33, quantity: 1 },
-        { name: "studio",     clicks: 36, quantity: 1 }
-    ]
+const nodeRedDirectory = path.join(os.homedir(), ".node-red")
+const sourceList = JSON.parse(fs.readFileSync(path.join(nodeRedDirectory, "sourceList.json")))
 var flowPattern = [0, 13, 13, 13, 13, 0] //to start with
 var flowPatternIndex = 0
 var TimeoutMs =  60*60*1000 //60 minutes in milliseconds
-//flow.set("waterDateLastSeen", new Date(flow.get("currentDate")), "file")
 var inCount = 0
 var outCount = 0
  
-main()
+main().catch((err) => { console.error(err) })
  
 async function main() {
     //connect
+    console.log("connecting...")
     client = await MQTT.connectAsync("mqtt://localhost:1883",{clientId:"simulator"})
     console.log("client.connected = "+client.connected)
 

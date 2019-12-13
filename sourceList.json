@@ -1,0 +1,47 @@
+[
+    {
+        "name": "dishwasher",
+        "clicks": 10,
+        "quantity": 1
+    },    
+    {
+        "name": "kitchen sink",
+        "clicks": 13,
+        "quantity": 1
+    },
+    {
+        "name": "bath sink",
+        "clicks": 17,
+        "quantity": 2
+    },
+    {
+        "name": "shower",
+        "clicks": 28,
+        "quantity": 1
+    },
+    {
+        "name": "laundry",
+        "clicks": 33,
+        "quantity": 1
+    },
+    {
+        "name": "studio",
+        "clicks": 36,
+        "quantity": 1
+    },
+    {
+        "name": "upstairs toilet",
+        "clicks": 39,
+        "quantity": 1
+    },
+    {
+        "name": "downstairs toilet",
+        "clicks": 48,
+        "quantity": 1
+    },
+    {
+        "name": "tub",
+        "clicks": 61,
+        "quantity": 1
+    }
+]
