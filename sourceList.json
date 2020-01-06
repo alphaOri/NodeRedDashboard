@@ -1,47 +1,56 @@
 [
     {
         "name": "dishwasher",
-        "clicks": 10,
+        "median": 10,
+        "range": 1,
         "quantity": 1
     },    
     {
         "name": "kitchen sink",
-        "clicks": 13,
+        "median": 13,
+        "range": 1,
         "quantity": 1
     },
     {
         "name": "bath sink",
-        "clicks": 17,
+        "median": 17,
+        "range": 2,
         "quantity": 2
     },
     {
         "name": "shower",
-        "clicks": 28,
+        "median": 28,
+        "range": 3,
         "quantity": 1
     },
     {
         "name": "laundry",
-        "clicks": 33,
+        "median": 33,
+        "range": 1,
         "quantity": 1
     },
     {
         "name": "studio",
-        "clicks": 36,
+        "median": 36,
+        "range": 1,
         "quantity": 1
     },
     {
         "name": "upstairs toilet",
-        "clicks": 39,
+        "median": 42,
+        "range": 1,
         "quantity": 1
     },
     {
         "name": "downstairs toilet",
-        "clicks": 48,
+        "median": 50,
+        "range": 2,
         "quantity": 1
     },
     {
         "name": "tub",
-        "clicks": 61,
+        "median": 70,
+        "range": 7,
         "quantity": 1
     }
 ]
