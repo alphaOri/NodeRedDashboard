@@ -89,7 +89,7 @@ async function getClicks(){
         if(flowPatternIndex>=flowPattern.length){
             //console.log("setting new rate & period.")
             //flow.set("flowRate", flow.get("sourceList", "file")[Math.floor(Math.random() * flow.get("sourceList", "file").length)].clicks)
-            var flowRate = sourceList[Math.floor(Math.random() * sourceList.length)].clicks
+            var flowRate = sourceList[Math.floor(Math.random() * sourceList.length)].median
             flowPattern = Array.from({length:((Math.floor(Math.random() * 10)+1)+2)}, u => (flowRate))
             //set beginning and end elements to zero
             flowPattern[0] = 0
