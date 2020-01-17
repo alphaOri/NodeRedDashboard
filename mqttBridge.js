@@ -20,8 +20,16 @@ async function main() {
         process.exit(1)});
 
     //subscribe
-    var subscribePromise = await remoteClient.subscribe("water_monitor/flow_meter")
-    //console.log("subscribePromise: "+subscribePromise)
+    var subscribePromises = []
+    subscribePromises.push(remoteClient.subscribe("water_monitor/flow_meter"))
+    subscribePromises.push(remoteClient.subscribe("water_monitor/valve_status"))
+    subscribePromises.push(localClient.subscribe("water_monitor/status_request"))
+    subscribePromises.push(localClient.subscribe("water_monitor/valve_control"))
+    try {
+        await Promise.all(subscribePromises)
+    } catch(error) {
+        console.error(error)
+    }
 
     //handle message
     remoteClient.on('message', async function(topic, message){
@@ -31,6 +39,19 @@ async function main() {
 		process.stdout.write("number of messages: "+numberOfMessages+ " message: "+message.toString())
         try{
             var publishPromise = await localClient.publish(topic, message);
+        } catch(err) {
+            console.error(err)
+        }
+    });
+
+        //handle message
+    localClient.on('message', async function(topic, message){
+    	numberOfMessages++
+		process.stdout.clearLine();
+		process.stdout.cursorTo(0);
+		process.stdout.write("number of messages: "+numberOfMessages+ " message: "+message.toString())
+        try{
+            var publishPromise = await remoteClient.publish(topic, message);
         } catch(err) {
             console.error(err)
         }
