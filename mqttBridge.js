@@ -23,6 +23,7 @@ async function main() {
     var subscribePromises = []
     subscribePromises.push(remoteClient.subscribe("water_monitor/flow_meter"))
     subscribePromises.push(remoteClient.subscribe("water_monitor/valve_status"))
+    subscribePromises.push(remoteClient.subscribe("water_monitor/pressure"))
     subscribePromises.push(localClient.subscribe("water_monitor/status_request"))
     subscribePromises.push(localClient.subscribe("water_monitor/valve_control"))
     try {
