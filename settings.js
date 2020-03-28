@@ -213,6 +213,7 @@ module.exports = {
         path:require('path'),
         os:require('os'),
         fs:require('fs'),
+        easytimer:require('easytimer.js'),
         // octalbonescript:require('octalbonescript'),
         // jfive:require("johnny-five"),
         // j5board:require("johnny-five").Board({repl:false})
