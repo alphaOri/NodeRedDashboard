@@ -1,0 +1,29 @@
+{
+  "name": "uibuilder",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "",
+  "scripts": {
+    "start_unix": "./node_modules/node-red/red.js -v -u .",
+    "start": "node node_modules/node-red/red.js -v -u .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node postinstall",
+    "build": "build_react"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "async-mqtt": "^2.4.2",
+    "easytimer.js": "^4.1.1",
+    "mongodb": "^3.3.2",
+    "moonjs": "^0.11.0",
+    "mqtt": "^3.0.0",
+    "node-red": "^0.18.4",
+    "node-red-contrib-timeout": "^1.1.4",
+    "node-red-contrib-uibuilder": "^1.0.6",
+    "node-red-dashboard": "~2.15.5",
+    "node-red-node-mongodb": "0.0.14",
+    "reactjs": "^1.0.0",
+    "riot": "^3.9.0"
+  }
+}
