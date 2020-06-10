@@ -254,5 +254,10 @@ module.exports = {
             // Whether or not to include audit events in the log output
             audit: false
         }
+    },
+    editorTheme: {
+        page: {
+            css: "/home/david/.node-red/node_modules/@node-red-contrib-themes/midnight-red/theme.css"
+        }
     }
 }
