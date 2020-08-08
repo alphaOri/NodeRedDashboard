@@ -1,3 +1,7 @@
+//this script tests the node-red water database storage algorithm by inputting trivial water usage data
+//roughly once an hour for the time range given.  Results have to be checked manually in the resulting 
+//mongo database store.
+
 const MQTT = require("async-mqtt");
 const path = require('path')
 const fs = require('fs')
