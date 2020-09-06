@@ -13,8 +13,10 @@ airTestsSequence : [
 	//{type: 4, sequenceName: "humidityTestsSequence"},
 	//{type: 4, sequenceName: "initializeSequence"},
 	//{type: 4, sequenceName: "fanTestsSequence"},
+	//{type: 4, sequenceName: "initializeSequence"},
+	//{type: 4, sequenceName: "temperatureFanBasicsTestsSequence"},
 	{type: 4, sequenceName: "initializeSequence"},
-	{type: 4, sequenceName: "temperatureFanTestsSequence"},
+	{type: 4, sequenceName: "temperatureWakeSleepTestsSequence"},
 	{type: 4, sequenceName: "finishingSequence"},
 ],
 initializeSequence:  [
@@ -70,7 +72,7 @@ initializeSequence:  [
     {type: 1, topic: "air/tempHumOut/tempHum", message: "{\"temperature\": 75, \"humidity\": 64}"},
     {type: 1, topic: "air/co2In/co2", message: "{\"co2\": 650}"},
     // wait for messages
-	{type: 3, waitTime: 2000, message: "clear all messages"},
+	{type: 3, waitTime: 6000, message: "clear all messages"},
 ],
 humidityTestsSequence : [
 //// HUMIDIFY TESTS ////
@@ -132,7 +134,7 @@ fanTestsSequence : [
 	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"fanOn\":true}"}]},
 	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"fanOn\":false}"}], timeout: 480},
 ],
-temperatureFanTestsSequence : [
+temperatureFanBasicsTestsSequence : [
 // mode: 0 is "off", 1 is "heating", 2 is "cooling"
 // timeMode: 0 is "plan", 1 is "once", 2 is "temp", 3 is "hold"
 // settings: index 0 is heating, index 1 is cooling
@@ -221,18 +223,67 @@ temperatureFanTestsSequence : [
 	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"mode\": 1}}"},
 	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":true}"}]},
 	{type: 3, waitTime: 15000, message: "should get no messages", errorIfMessage: true},
-	//Wake on triggers temp/fan on
-	//Wake off tri
+],
+temperatureWakeSleepTestsSequence : [
+	//Set to HEATING mode, setpoint, and PLAN timeMode
+	{type: 1, topic: "air/tempHumIn/tempHum", message: "{\"temperature\": 68}"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 69, \"timeMode\": 0}}"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"mode\": 1}}"},
+	//Wake time triggers setpoint change when in PLAN mode
+    {type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeSetpoint\": 67 }}}"},
+    {type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeTime\": \"timestamp\"}}}", timestampSecondsFromNow: 5},
+    {type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeOn\": true }}}"},
+	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":true}"},
+					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":true}"},], timeout: 5	},
+	//Wake time triggers setpoint change when in ONCE mode, mode switches to PLAN mode
+	//Wake time triggers setpoint change when in TEMP mode, mode switches to PLAN mode
+	//Wake time does NOT trigger setpoint change when in HOLD mode, stays in HOLD mode
+	//Wake time off clears timer for setpoint change
+	//Changing Wake time resets timer properly
+	//After timer expires, timer is reset properly
+
+	//Sleep time triggers setpoint change when in PLAN mode
+	//Sleep time triggers setpoint change when in ONCE mode, mode switches to PLAN mode
+	//Sleep time triggers setpoint change when in TEMP mode, mode switches to PLAN mode
+	//Sleep time does NOT trigger setpoint change when in HOLD mode, stays in HOLD mode
+	//Sleep time off clears timer for setpoint change
+	//Changing Sleep time resets timer properly
+	//After timer expires, timer is reset properly
+
+	//Switching cooling to heating triggers timers to be set properly
+	//Switching heating to cooling triggers timers to be set properly
+	//Switching to mode off triggers timers to be cleared
+],
+temperatureTimeModeTestsSequence : [
+	//When in PLAN mode, setpoint change switches to ONCE mode
+	//When setpoint is reached, switches to PLAN mode
+	//When in ONCE mode, setpoint change stays in ONCE mode
+	//When in TEMP mode, setpoint change switches to ONCE mode
+	//When in HOLD mode, setpoint change switches to ONCe mode
+],
+temperatureModeTestsSequence : [
+	//When ON in COOLING mode, switching to HEATING mode turns unit OFF
+	//When ON in HEATING mode, switching to COOLING mode turn unit OFF
+	//When in ONCE mode, when setpoint is reached, switches to PLAN mode
+	//When in ONCE mode, setpoint change stays in ONCE mode
+	//When in TEMP mode, setpoint change switches to ONCE mode
+	//When in HOLD mode, setpoint change switches to ONCe mode
+],
+testUserInput : [
+	{type: 5, message: "Are you David? (y/n)", expectedAnswer: "y"},
+	{type: 5, message: "How old are you?", expectedAnswer: "32"},
+	{type: 5, message: "Why?", expectedAnswer: "bECauSe"}
 ],
 finishingSequence : [
 	{type: 0, comment: "Close Testing"},
-	{type: 1, topic: "air/test/UIspoof", message: "{\"testingModeOn\":false}"},
+	//{type: 1, topic: "air/test/UIspoof", message: "{\"testingModeOn\":false}"},
 	{type: 3, waitTime: 1000, message: "clear all messages"}
 ],
 }
 
 const MQTT = require("async-mqtt")
 var easyTimer = require('easytimer.js').Timer;
+const readline = require('readline');
 
 //globals
 var gotAllMessages = false
@@ -291,7 +342,7 @@ async function main() {
     });
 
     await executeSequence(sequences.airTestsSequence)
-    endProgram()
+    endProgram("-----   Passed all tests successfully. ------")
 }
 
 async function executeSequence(sequence){
@@ -303,8 +354,14 @@ async function executeSequence(sequence){
        		console.log("//// "+sequence[index].comment+" ////")
        	} else if(sequence[index].type === 1){
 		    try{
-		    	console.log("	sent message: topic: "+sequence[index].topic+ ", message: "+ sequence[index].message)
+		    	if(sequence[index].timestampSecondsFromNow){
+		    		var timestamp = new Date()
+		    		timestamp.setSeconds(timestamp.getSeconds()+sequence[index].timestampSecondsFromNow)
+		    		sequence[index].message = (sequence[index].message).replace("timestamp", timestamp.toISOString())
+
+		    	}
 		        await client.publish(sequence[index].topic, sequence[index].message);
+		        console.log("	sent message: topic: "+sequence[index].topic+ ", message: "+ sequence[index].message)
 		    } catch(err) {
 		        console.error(err)
 		    }
@@ -332,6 +389,12 @@ async function executeSequence(sequence){
 		} else if(sequence[index].type === 4) { //run sub-sequence
 			console.log("	Starting sequence: " + sequence[index].sequenceName)
 			await executeSequence(sequences[sequence[index].sequenceName])
+		} else if(sequence[index].type === 5) { //await user input
+			const answer = await askQuestion(sequence[index].message);
+			if(answer.localeCompare(sequence[index].expectedAnswer, undefined, { sensitivity: 'base' })){
+				endProgram("Test failed.  Expected answer: "+sequence[index].expectedAnswer)
+			}
+			//console.log("Test passed.")
 		}
     }
 }
@@ -372,6 +435,18 @@ function handleTargetAchieved(){
 	}
 }
 //////END TIMER STUFF//////
+
+function askQuestion(query) {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+
+    return new Promise(resolve => rl.question(query+" ", ans => {
+        rl.close();
+        resolve(ans);
+    }))
+}
 
 const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
