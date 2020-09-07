@@ -72,7 +72,7 @@ initializeSequence:  [
     {type: 1, topic: "air/tempHumOut/tempHum", message: "{\"temperature\": 75, \"humidity\": 64}"},
     {type: 1, topic: "air/co2In/co2", message: "{\"co2\": 650}"},
     // wait for messages
-	{type: 3, waitTime: 6000, message: "clear all messages"},
+	{type: 3, waitTime: 5000, message: "clear all messages"},
 ],
 humidityTestsSequence : [
 //// HUMIDIFY TESTS ////
@@ -251,9 +251,54 @@ temperatureWakeSleepTestsSequence : [
 					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":true}"},], timeout: 5	},
 	{type: 5, message: "Did UI change temp timeMode to PLAN? (y/n)", expectedAnswer: "y"},
 	//Wake time triggers setpoint change when in TEMP mode, mode switches to PLAN mode
+	{type: 0, comment: "Wake time triggers setpoint change when in ONCE mode, mode switches to PLAN mode"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 67, \"timeMode\": 2}}"},
+	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":false}"},
+					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":false}"},], timeout: 5	},
+	{type: 5, message: "Did UI change temp timeMode to TEMP? (y/n)", expectedAnswer: "y"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeTime\": \"timestamp\"}}}", timestampSecondsFromNow: 5},
+	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":true}"},
+					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":true}"},], timeout: 5	},
+	{type: 5, message: "Did UI change temp timeMode to PLAN? (y/n)", expectedAnswer: "y"},
 	//Wake time does NOT trigger setpoint change when in HOLD mode, stays in HOLD mode
-	//Wake time off clears timer for setpoint change
+	{type: 0, comment: "Wake time does NOT trigger setpoint change when in HOLD mode, stays in HOLD mode"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 67, \"timeMode\": 3}}"},
+	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":false}"},
+					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":false}"},], timeout: 5	},
+	{type: 5, message: "Did UI change temp timeMode to HOLD? (y/n)", expectedAnswer: "y"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeTime\": \"timestamp\"}}}", timestampSecondsFromNow: 5},
+	{type: 3, waitTime: 5000, message: "should get no messages", errorIfMessage: true},
+	{type: 5, message: "Did UI temp timeMode stay in HOLD mode? (y/n)", expectedAnswer: "y"},
+	//Check that while in HOLD mode, wake time will still change the setpoint of PLAN mode.
+	{type: 0, comment: "Check that while in HOLD mode, wake time will still change the setpoint of PLAN mode."},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 67, \"timeMode\": 0}}"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 67, \"timeMode\": 3}}"},
+	{type: 3, waitTime: 2000, message: "did not change setpoint, only timeMode to HOLD, should not get any messages", errorIfMessage: true},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeTime\": \"timestamp\"}}}", timestampSecondsFromNow: 5},
+	{type: 3, waitTime: 5000, message: "wake timer should not disrupt HOLD mode. should get no messages", errorIfMessage: true},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"timeMode\": 0}}"},
+	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":true}"},
+					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":true}"},], timeout: 5	},
+	{type: 5, message: "Did UI change temp timeMode to PLAN mode? (y/n)", expectedAnswer: "y"},
+	//Wake timer off clears timer for setpoint change
+	{type: 0, comment: "Wake timer off clears timer for setpoint change"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 67, \"timeMode\": 0}}"},
+	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":false}"},
+					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":false}"},], timeout: 5	},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeTime\": \"timestamp\"}}}", timestampSecondsFromNow: 5},
+	{type: 3, waitTime: 3000, message: "wait 3 seconds before sending Wake OFF", errorIfMessage: true},
+    {type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeOn\": false }}}"},
+	{type: 3, waitTime: 3000, message: "timer should not go off now, so we should not get any messages", errorIfMessage: true},
 	//Changing Wake time resets timer properly
+	{type: 0, comment: "Changing Wake time resets timer properly"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 67, \"timeMode\": 0}}"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeTime\": \"timestamp\"}}}", timestampSecondsFromNow: 5},
+    {type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeOn\": true }}}"},
+	{type: 3, waitTime: 3000, message: "wait 3 seconds before sending new Wake Time", errorIfMessage: true},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeTime\": \"timestamp\"}}}", timestampSecondsFromNow: 5},
+	{type: 3, waitTime: 3000, message: "wait 3 seconds to make sure old timer does not go off", errorIfMessage: true},
+	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":true}"},
+					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":true}"},], timeout: 3	},
 	//After timer expires, timer is reset properly
 
 	//Sleep time triggers setpoint change when in PLAN mode
@@ -393,7 +438,8 @@ async function executeSequence(sequence){
 			try{
 				currentStep = sequence[index]
 				if(sequence[index].timeout){
-					startTimer(sequence[index].timeout+1)
+					var buffer = 1+Math.floor(0.00625*sequence[index].timeout) //gives 1+3 extra seconds at 480 seconds
+					startTimer(sequence[index].timeout+buffer)
 				}
 				await getMessage()
 				endTimer()
@@ -430,7 +476,7 @@ async function getMessage() {
 
 //////TIMER STUFF//////
 function startTimer(secondsDuration) {
-    messageTimeoutTimer.start({countdown: true, startValues: {seconds: secondsDuration+1}})
+    messageTimeoutTimer.start({countdown: true, startValues: {seconds: secondsDuration}})
     printInPlace("	timeout in: "+messageTimeoutTimer.getTimeValues().toString(['minutes'])+":"+messageTimeoutTimer.getTimeValues().toString(['seconds']))
     
     messageTimeoutTimer.addEventListener('secondsUpdated', handleSecondsUpdated)
