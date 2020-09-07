@@ -225,17 +225,31 @@ temperatureFanBasicsTestsSequence : [
 	{type: 3, waitTime: 15000, message: "should get no messages", errorIfMessage: true},
 ],
 temperatureWakeSleepTestsSequence : [
+// mode: 0 is "off", 1 is "heating", 2 is "cooling"
+// timeMode: 0 is "plan", 1 is "once", 2 is "temp", 3 is "hold"
+// settings: index 0 is heating, index 1 is cooling
 	//Set to HEATING mode, setpoint, and PLAN timeMode
+	{type: 0, comment: "Set to HEATING mode, setpoint, and PLAN timeMode"},
 	{type: 1, topic: "air/tempHumIn/tempHum", message: "{\"temperature\": 68}"},
-	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 69, \"timeMode\": 0}}"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 67, \"timeMode\": 0}}"},
 	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"mode\": 1}}"},
 	//Wake time triggers setpoint change when in PLAN mode
-    {type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeSetpoint\": 67 }}}"},
+	{type: 0, comment: "Wake time triggers setpoint change when in PLAN mode"},
+    {type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeSetpoint\": 69 }}}"},
     {type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeTime\": \"timestamp\"}}}", timestampSecondsFromNow: 5},
     {type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeOn\": true }}}"},
 	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":true}"},
 					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":true}"},], timeout: 5	},
 	//Wake time triggers setpoint change when in ONCE mode, mode switches to PLAN mode
+	{type: 0, comment: "Wake time triggers setpoint change when in ONCE mode, mode switches to PLAN mode"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"setpoint\": 67, \"timeMode\": 1}}"},
+	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":false}"},
+					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":false}"},], timeout: 5	},
+	{type: 5, message: "Did UI change temp timeMode to ONCE? (y/n)", expectedAnswer: "y"},
+	{type: 1, topic: "air/test/UIspoof", message: "{\"temperature\": {\"settings\": {\"index\": 0, \"wakeTime\": \"timestamp\"}}}", timestampSecondsFromNow: 5},
+	{type: 2, responses: [{topic: "air/heatCoolFan/control", message: "{\"temperatureUnitOn\":true}"},
+					  {topic: "air/heatCoolFan/control", message: "{\"fanOn\":true}"},], timeout: 5	},
+	{type: 5, message: "Did UI change temp timeMode to PLAN? (y/n)", expectedAnswer: "y"},
 	//Wake time triggers setpoint change when in TEMP mode, mode switches to PLAN mode
 	//Wake time does NOT trigger setpoint change when in HOLD mode, stays in HOLD mode
 	//Wake time off clears timer for setpoint change
@@ -255,8 +269,8 @@ temperatureWakeSleepTestsSequence : [
 	//Switching to mode off triggers timers to be cleared
 ],
 temperatureTimeModeTestsSequence : [
-	//When in PLAN mode, setpoint change switches to ONCE mode
-	//When setpoint is reached, switches to PLAN mode
+	//In PLAN mode, when setpoint is reached in direction of MODE, switches to PLAN mode
+	//In PLAN mode, when setpoint is reached in opposite direction of MODE, switches to PLAN mode
 	//When in ONCE mode, setpoint change stays in ONCE mode
 	//When in TEMP mode, setpoint change switches to ONCE mode
 	//When in HOLD mode, setpoint change switches to ONCe mode
@@ -268,6 +282,12 @@ temperatureModeTestsSequence : [
 	//When in ONCE mode, setpoint change stays in ONCE mode
 	//When in TEMP mode, setpoint change switches to ONCE mode
 	//When in HOLD mode, setpoint change switches to ONCe mode
+],
+temperatureSensorTestsSequence : [
+	//When unit is ON and the temperatureIn sensor disconnects
+	//When unit if OFF and the temperatureIn sensor disconnects
+	//When unit is ON and the temperatureOut sensor disconnects
+	//When unit if OFF and the temperatureOut sensor disconnects
 ],
 testUserInput : [
 	{type: 5, message: "Are you David? (y/n)", expectedAnswer: "y"},
